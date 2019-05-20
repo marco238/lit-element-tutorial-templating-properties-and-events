@@ -6,8 +6,9 @@ import '@vaadin/vaadin-radio-button/vaadin-radio-button';
 import '@vaadin/vaadin-radio-button/vaadin-radio-group';
 import { connect } from 'pwa-helpers';
 
-import { VisibilityFilters } from '../redux/reducer.js';
+import { VisibilityFilters, getVisibleTodosSelector } from '../redux/reducer.js';
 import { store } from '../redux/store.js'
+import { addTodo, updateTodoStatus, updateFilter, clearCompleted } from '../redux/actions.js';
 
 class TodoView extends connect(store)(LitElement) {
   static get properties() {
@@ -19,7 +20,7 @@ class TodoView extends connect(store)(LitElement) {
   }
 
   stateChanged(state) {
-    this.todos = state.todos;
+    this.todos = getVisibleTodosSelector(state);
     this.filter = state.filter;
   }
 
@@ -65,7 +66,7 @@ class TodoView extends connect(store)(LitElement) {
 
       <div class="todos-list">
         ${
-          this.applyFilter(this.todos).map(
+          this.todos.map(
             todo => html`
               <div class="todo-item">
                 <vaadin-checkbox
@@ -105,13 +106,7 @@ class TodoView extends connect(store)(LitElement) {
 
   addTodo() {
     if (this.task) {
-      this.todos = [
-        ...this.todos,
-        {
-          task: this.task,
-          complete: false
-        }
-      ];
+      store.dispatch(addTodo(this.task));
       this.task = '';
     }
   }
@@ -127,28 +122,15 @@ class TodoView extends connect(store)(LitElement) {
   }
 
   updateTodoStatus(updatedTodo, complete) {
-    this.todos = this.todos.map(todo =>
-      updatedTodo === todo ? { ...updatedTodo, complete } : todo
-    );
+    store.dispatch(updateTodoStatus(updatedTodo, complete));
   }
 
   filterChanged(e) {
-    this.filter = e.target.value;
+    store.dispatch(updateFilter(e.detail.value));
   }
 
   clearCompleted() {
-    this.todos = this.todos.filter(todo => !todo.complete);
-  }
-
-  applyFilter(todos) {
-    switch (this.filter) {
-      case VisibilityFilters.SHOW_ACTIVE:
-        return todos.filter(todo => !todo.complete);
-      case VisibilityFilters.SHOW_COMPLETED:
-        return todos.filter(todo => todo.complete);
-      default:
-        return todos;
-    }
+    store.dispatch(clearCompleted());
   }
 
   createRenderRoot() {
